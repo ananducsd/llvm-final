@@ -1,0 +1,33 @@
+miniz.c version: 9.1.15
+Compressed from 490 to 81 bytes
+Decompressed from 81 to 490 bytes
+Success.
+ret	42
+br	28848
+switch	1
+add	14606
+sub	1780
+mul	29
+udiv	3
+sdiv	5
+urem	7
+shl	4739
+lshr	749
+ashr	236
+and	3426
+or	638
+xor	814
+alloca	473
+load	86542
+store	29640
+getelementptr	33683
+trunc	1241
+zext	16367
+sext	2384
+ptrtoint	194
+bitcast	322
+icmp	14137
+phi	827
+call	140
+select	2
+Total	241875

@@ -1,0 +1,37 @@
+#include <map>
+#include <string.h>
+#include <utility>
+#include <llvm/IR/Instruction.h>
+#include <iostream>
+#include "stdio.h"
+
+std::map<int, int> glob_map;
+std::map<int, int>::iterator iter;
+
+extern "C" {
+
+	void update_map(int op_code, int count) {
+		
+		//std::cout << "opcode = " << op_code << ", count = " << count <<"\n";
+		iter = glob_map.find(op_code); 
+		if (iter != glob_map.end()) {
+			iter->second = iter->second + count;
+		} else {
+			glob_map.insert(std::make_pair(op_code, count));	
+		}	
+	}
+
+	void print_map() {
+		int total = 0;
+		for(iter = glob_map.begin(); iter != glob_map.end(); ++iter) {
+					
+			std::cout << llvm::Instruction::getOpcodeName(iter->first) << "\t" << iter->second << "\n";
+			total += iter->second;
+		}
+		
+                std::cout << "Total\t" << total << "\n";
+	}
+
+}
+
+

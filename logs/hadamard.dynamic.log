@@ -1,0 +1,19 @@
+*******************************************
+PASS: The output matches the golden output!
+*******************************************
+ret	2
+br	3176
+add	3199
+sub	448
+shl	128
+ashr	8
+alloca	18
+load	12834
+store	4055
+getelementptr	2306
+trunc	2056
+zext	8155
+sext	256
+icmp	1105
+call	135
+Total	37881

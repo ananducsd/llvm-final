@@ -1,0 +1,8 @@
+
+extern "C" {
+	void update_map(int op_code, int count);
+	void print_map();
+}
+
+
+
