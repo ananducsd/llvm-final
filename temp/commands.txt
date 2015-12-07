@@ -1,0 +1,7 @@
+source startenv.sh
+cd temp
+make -C ..
+opt -load /home/anand/cse231-proj1/llvm/build/Release+Asserts/lib/CSE231.so -ConstantProp < prog_reg.bc > prog_instr.bc
+
+
+
