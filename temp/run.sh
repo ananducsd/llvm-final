@@ -10,7 +10,7 @@ clang -emit-llvm -c $1.c -o temp.bc
 #run mem to reg pass - use registers as much as possible
 opt -mem2reg < temp.bc > $1_in.bc
 #run our constant propagation pass
-opt -load $LLVMLIB/CSE231.so -ConstantProp < $1_in.bc > $1_out.bc
+opt -load $LLVMLIB/CSE231.so -SubExpression < $1_in.bc > $1_out.bc
 #disassemble the bitcodes for debugging
 llvm-dis $1_in.bc
 

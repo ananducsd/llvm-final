@@ -334,8 +334,8 @@ namespace{
     }
   };
 
-     void ConstantProp::print(raw_ostream &O,const Module*) const{
-        O << "Count dynamic pass done!! \n";           
+    void ConstantProp::print(raw_ostream &O,const Module*) const{
+        O << "Const prop pass done!! \n";           
     }
 }
 
