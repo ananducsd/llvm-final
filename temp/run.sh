@@ -33,9 +33,12 @@ rm *.ll
 
 for f in $FILES
 do
+  
   filename=$(basename "$f")
   extension="${filename##*.}"
   filename="${filename%.*}"
+  echo "-------------------------"
+  echo "Processing file $filename"
   runConstProp $filename
 done
 
