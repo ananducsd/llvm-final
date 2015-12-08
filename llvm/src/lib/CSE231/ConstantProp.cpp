@@ -49,7 +49,7 @@ namespace{
             for(inst_it = removeInstrSet.begin(); inst_it != removeInstrSet.end(); inst_it++) {
                 errs() << "Trying to delete instruction " << (*inst_it)->getOpcodeName() << "\n";
                 Instruction *temp = (*inst_it);
-                if (!temp->use_empty())  temp->removeFromParent();
+                temp->eraseFromParent();
             }
 
             /*
