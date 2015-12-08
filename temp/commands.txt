@@ -3,3 +3,10 @@ cd temp
 make -C ..
 opt -load $LLVMLIB/CSE231.so -ConstantProp < $CSE231ROOT/temp/prog_reg.bc > $CSE231ROOT/temp/prog_instr.bc
 
+clang -emit-llvm -c prog.c -o prog.bc
+opt -mem2reg < prog.bc > prog_reg.bc
+opt -load $LLVMLIB/CSE231.so -ConstantProp < prog_reg.bc > prog_instr.bc
+llvm-dis prog_reg.bc
+llvm-dis prog_instr.bc
+
+
