@@ -1,12 +1,16 @@
 #include <stdio.h>
 
-int main() {
-	int b = 10;
-	int c = 30;
-	int g = 0;
-	int e = 0;
+int f (int a, int b) {
+	int c = a + b;
+	int d = a + b;
 
-	int a = b * c + g;
-	int d = b * c * e;
-	printf("Value = %d\n", a);
+	int e = c + d;
+
+	return e;
+}
+
+int main() {
+	
+	f(2, 3);
+	return 0;
 }
