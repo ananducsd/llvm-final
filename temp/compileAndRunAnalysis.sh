@@ -1,3 +1,11 @@
+
+# passes available
+
+# CSEPass           : common subexpression elimination
+# RangePass         : Range analysis
+# BranchFoldingPass : Branch folding
+# ConstPass 		: Constant propagation and folding
+
 if [ $# -ne 2 ]; then
         echo "usage: ./compileAndRunAnalysis.sh file-name pass-name"
         exit 1
