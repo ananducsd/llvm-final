@@ -22,7 +22,7 @@ echo "Compiling file $1 and using $fname . . . "
 clang -emit-llvm -c $1 -o $fname.bc
 echo "Generating $fname.bc and running mem2reg pass . . . "
 opt -mem2reg < $fname.bc > ${fname}_in.bc
-echo "Running Constant Propagation on ${fname}_reg.bc . . . "
+echo "Running ${passname} on ${fname}_in.bc . . . "
 echo -e "\n-----------------------------------------------------------------------"
 opt -load $LLVMLIB/SidGroup.so -${passname} < ${fname}_in.bc > ${fname}_out.bc
 echo -e "\n-----------------------------------------------------------------------"
