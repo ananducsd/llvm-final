@@ -2,8 +2,6 @@
 #include "RObjects.cpp"
 
 
-//opt -load $LLVMLIB/CSE231.so -RangePass < $BENCHMARKS/gcd/gcd.bc > temp.instrumented.bc
-
 using namespace llvm;
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
