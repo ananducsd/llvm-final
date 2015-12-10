@@ -52,10 +52,11 @@ namespace{
                 temp->eraseFromParent();
             }
 
-            dataFlowFactsMap.myfile.open("~/outfromc.txt");
+            dataFlowFactsMap.myfile.open("FindMee.txt");
             
             for (Function::iterator blk = F.begin(), e = F.end(); blk != e; ++blk) {
                 for (BasicBlock::iterator j = blk->begin(), e = blk->end(); j != e; ++j){
+                    dataFlowFactsMap.myfile << "Here";        
                     dataFlowFactsMap.printInsFact(j);
                 }
             }

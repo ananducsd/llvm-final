@@ -1,14 +1,13 @@
-#define DEBUG_TYPE "ConstPass"
+#define DEBUG_TYPE "CSEPass"
 #include <map>
-#include "CSEObjects.cpp"
+#include "AvailableExpression.cpp"
 
-/*
-*/
-
-//opt -load $LLVMLIB/CSE231.so -CSEPass < $BENCHMARKS/gcd/gcd.bc > temp.instrumented.bc
 
 using namespace llvm;
+using namespace avlexp;
+
 namespace {
+  
 	static IRBuilder<> builder(getGlobalContext());
 	
   struct CSEPass : public ModulePass {
@@ -22,7 +21,7 @@ namespace {
     bool runOnModule(Module &M){
       
       //create the worklist object
-      CSE_workListObj* wl = new CSE_workListObj(10010);
+      Worklist* wl = new Worklist(10010);
       wl->init(M);
       wl->run();
       //print results...
@@ -33,19 +32,19 @@ namespace {
       bool isChanged = true;
       while(isChanged == true){
         isChanged = false;
-        for(map<int, CSE_BBNode*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-          CSE_BBNode * BBN = it->second;
+        for(map<int, BBNode*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+          BBNode * BBN = it->second;
           //For each node
           for(unsigned int i=0; i<BBN->nodes.size(); i++){
           //aExpr
-            CSE_Node * N = BBN->nodes[i];
+            Node * N = BBN->nodes[i];
             //update the current available expressions (remove any duplicates)
             for(set<Instruction*>::iterator it = N->e->aExpr.begin(); it != N->e->aExpr.end(); it++) {
               Instruction * compare = *it;
               //general case:
-              if(compare->isIdenticalTo(N->oI) && N->oI->getOpcode() != Instruction::Alloca){
+              if(compare->isIdenticalTo(N->I) && N->I->getOpcode() != Instruction::Alloca){
                 //replace all instructions with the available expression!
-                N->oI->replaceAllUsesWith(compare);
+                N->I->replaceAllUsesWith(compare);
                 isChanged = false;
               }
             }   

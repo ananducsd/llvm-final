@@ -17,16 +17,19 @@
 
 using namespace std;
 using namespace llvm;
+using namespace metalattice;
 
-class const_Fact
+namespace constprop {
+
+class Fact
 {
   public:
   bool isBottom; //everything defaults to bottom until a value is added
   set<Value *> possibleValues;
-  const_Fact() {
+  Fact() {
     isBottom = true;
   }
-  const_Fact(set<Value *> startValues) {
+  Fact(set<Value *> startValues) {
     if(startValues.size() > 0) { 
       possibleValues = startValues;
       isBottom = false;
@@ -35,7 +38,7 @@ class const_Fact
       isBottom = true;
     }
   }
-  const_Fact(const_Fact * parent) {
+  Fact(Fact * parent) {
     //check case where the values aren't defined yet
     if(parent != NULL){
       isBottom = parent->isBottom;
@@ -52,24 +55,26 @@ class const_Fact
   }
 };
 
-class const_Edge
+class Edge:public BaseEdge
 {
   public:
   bool isTop;
   bool isBottom;
-  map<Value *,const_Fact *> * data;
 
-  const_Edge(){
+  // map from variable to constants  { (X, {3, 5}), (Y, {5} ) }
+  map<Value *,Fact *> * data;
+
+  Edge(){
     isTop = false;
     isBottom = true;
-    data = new map<Value *,const_Fact *>();
+    data = new map<Value *,Fact *>();
   }
   //copy constructor for edge
-  const_Edge(const_Edge * parent){
+  Edge(Edge * parent){
     isTop = parent->isTop;
     isBottom = parent->isBottom;
-    data = new map<Value *,const_Fact *>();
-    map<Value *,const_Fact *>::iterator it;
+    data = new map<Value *,Fact *>();
+    map<Value *,Fact *>::iterator it;
     for(it = parent->data->begin(); it != parent->data->end(); it++) {
       addFact(it->first,it->second);
     }
@@ -82,23 +87,23 @@ class const_Edge
     }
     return data->count(test);
   }
-  //lookup is useful for getting a keys fact, and creating a new one if not found on insertion
-  const_Fact * lookup(Value * key){
+  
+  Fact * lookup(Value * key){
     if(data->count(key) == 1) { //if key is instruction that has data already,
-      return new const_Fact(data->find(key)->second); //then return that data
+      return new Fact(data->find(key)->second); //then return that data
     } else {
-      const_Fact * temp = new const_Fact(); //the key is not an instruction
+      Fact * temp = new Fact(); //the key is not an instruction
       temp->isBottom = false;   //create a new fact to store the value
       temp->possibleValues.insert(key);
       temp->checkIfSuperconstant();
       return temp;
     }
   }
-  void addFact(Value * key, const_Fact * f){ //can add multiple values, preserves bottom state
+  void addFact(Value * key, Fact * f){ //can add multiple values, preserves bottom state
     if(data->count(key) == 0) {
-      data->insert(pair<Value *,const_Fact *>(key,new const_Fact(f)));
+      data->insert(pair<Value *,Fact *>(key,new Fact(f)));
     } else {
-      const_Fact * ef = data->find(key)->second;
+      Fact * ef = data->find(key)->second;
       ef->isBottom = (ef->isBottom || f->isBottom);
       if(!ef->isBottom){
         ef->possibleValues.insert(f->possibleValues.begin(),f->possibleValues.end());
@@ -107,11 +112,11 @@ class const_Edge
     }
   }
   void addValue(Value * key, Value * possibleValue) {
-    const_Fact * f;
+    Fact * f;
     if(data->count(key) == 0) { //check if key w/ fact exists
-      f = new const_Fact();
+      f = new Fact();
       f->isBottom = false;
-      data->insert(pair<Value *,const_Fact *>(key,f));
+      data->insert(pair<Value *,Fact *>(key,f));
     } else {
       f = data->find(key)->second;
     }
@@ -121,7 +126,7 @@ class const_Edge
   }
   void removeValue(Value * key, Value * possibleValue) {
     if(data->count(key) == 1) { //check that key exists
-      const_Fact * f = data->find(key)->second;
+      Fact * f = data->find(key)->second;
       if(f->possibleValues.count(possibleValue)) { //check that value to remove exists
         f->possibleValues.erase(f->possibleValues.find(possibleValue));
       }
@@ -132,66 +137,26 @@ class const_Edge
       data->erase(data->find(key));
     }
   }
-  void setValue(Value * key, const_Fact * destPointer){
+  void setValue(Value * key, Fact * destPointer){
     if(data->count(key) == 1) { //free old fact and set it equal to destPointer
       //free(data->find(key)->second); //WARNING : this might be a memory leak, but is unsafe to use
       data->find(key)->second = destPointer;
     } else { //if key does not exist, just create a new pair
-      data->insert(pair<Value *,const_Fact *>(key,destPointer));
+      data->insert(pair<Value *,Fact *>(key,destPointer));
     }
   }
 };
 
-class const_Node
+class FlowFunctions:public BaseFlowFunctions
 {
   public:
-  Instruction * oI;
-  const_Edge * e;
-  
-  const_Node(Instruction * I){
-    e = new const_Edge();
-    oI = I;
-  }
-};
-
-class const_BBNode
-{
-  public:
-  int bID;
-  BasicBlock * originalBB;
-  const_Edge * incoming;
-  //can have multiple outgoing edges
-  map<int, const_Edge *> outgoing;
-  vector<const_Node *> nodes;
-  
-  const_BBNode(int ibID, BasicBlock * BB){
-    bID = ibID;
-    originalBB = BB;
-    incoming = new const_Edge();
-    //loop over each instruction in orginalBB and create a const_Node to point to them
-    for (BasicBlock::iterator I = originalBB->begin(), Ie = originalBB->end(); I != Ie; ++I) {
-      nodes.push_back(new const_Node(I));
-    }
-  }
-  //use the names of the successor BBs to add the outgoing edges
-  void setup() {
-    for (succ_iterator SI = succ_begin(originalBB), E = succ_end(originalBB); SI != E; ++SI) {
-      BasicBlock *Succ = *SI;
-      int id = atoi(Succ->getName().str().c_str());
-      outgoing[id] = new const_Edge();
-    }
-  }
-};
-
-class const_FlowFunctions
-{
-  public:
-  const_FlowFunctions(){
+  FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
   
-  map<int, const_Edge *> m(const_Edge * in, const_BBNode * N){
-    map<int, const_Edge *> result;
+  map<int, Edge *> m(Edge * in, BBNode * N){
+    map<int, Edge *> result;
+
     //go over each instruction in the BB and apply the flow function!!!
     for(unsigned int i=0;i<N->nodes.size() - 1;i++){
       in = mapInstruction(in, N->nodes[i]);
@@ -202,84 +167,85 @@ class const_FlowFunctions
     for (succ_iterator SI = succ_begin(N->originalBB), E = succ_end(N->originalBB); SI != E; ++SI) {
       BasicBlock *Succ = *SI;
       int id = atoi(Succ->getName().str().c_str());
-      result[id] = mapTerminator(new const_Edge(in),N->nodes.back());
+      result[id] = mapTerminator(new Edge(in),N->nodes.back());
     }
     return result;
   }
 
   //do flow function calls here
-  const_Edge * mapInstruction(const_Edge *in, const_Node *node) {
-    switch(node->oI->getOpcode()) {
+  Edge * mapInstruction(Edge *in, Node *node) {
+    switch(node->I->getOpcode()) {
       //X = *
       case Instruction::Alloca: { //done
         //due to SSA, we don't need to check this one
-        const_Fact * newFact = new const_Fact(); //it defaults to bottom = true
-        in->data->insert(pair<Value *,const_Fact *>(node->oI,newFact));
+        Fact * newFact = new Fact(); //it defaults to bottom = true
+        in->data->insert(pair<Value *,Fact *>(node->I,newFact));
         in->isTop = false;
       } break;
       //X* = Y
       case Instruction::Store: {
         //TODO : do a check that it isn't bottom in this one before killing it...
-        if(in->data->count(node->oI->getOperand(1))) {
-          //const_Fact * t = in->data->find(node->oI->getOperand(1))->second;
+        if(in->data->count(node->I->getOperand(1))) {
+          //Fact * t = in->data->find(node->I->getOperand(1))->second;
           //if(!t->isBottom){
-            in->kill(node->oI->getOperand(1)); //remove all references to X
+            in->kill(node->I->getOperand(1)); //remove all references to X
           //}
         }
-        const_Fact * toAdd = in->lookup(node->oI->getOperand(0)); //generate the new fact for that operand
-        in->addFact(node->oI->getOperand(1), toAdd); //update that fact
+        Fact * toAdd = in->lookup(node->I->getOperand(0)); //generate the new fact for that operand
+        in->addFact(node->I->getOperand(1), toAdd); //update that fact
       } break;
       //X = Y
       case Instruction::Load: { //working on!
         //due to SSA we can just add a fact where it has the value pointing to the Y value...
-        const_Fact * newFact;  
-        if(in->data->count(node->oI->getOperand(0)) == 1) {
-          newFact = new const_Fact(in->data->find(node->oI->getOperand(0))->second);
+        Fact * newFact;  
+        if(in->data->count(node->I->getOperand(0)) == 1) {
+          newFact = new Fact(in->data->find(node->I->getOperand(0))->second);
         } else {
-          newFact = new const_Fact(); //case where there is no fact for Y
+          newFact = new Fact(); //case where there is no fact for Y
         }
-        in->setValue(node->oI,newFact);
+        in->setValue(node->I,newFact);
         in->isTop = false;
       } break;
       default : {
-        if(isa<CallInst>(node->oI)){
-          handleFuncCall(in,node->oI);
+        if(isa<CallInst>(node->I)){
+          handleFuncCall(in,node->I);
           return in;
         }
-        const_Fact * newFact;
+        Fact * newFact;
         set<Value *> results;
         //NOTE: we currently only support 2 operand other instructions
-        if(node->oI->getNumOperands() == 2){
-          if(in->hasUsefulData(node->oI->getOperand(0)) && in->hasUsefulData(node->oI->getOperand(1))){
-            results = getAllResults(node->oI,in);
+        if(node->I->getNumOperands() == 2){
+          if(in->hasUsefulData(node->I->getOperand(0)) && in->hasUsefulData(node->I->getOperand(1))){
+            results = getAllResults(node->I,in);
             if(results.size() == 0){
-              newFact = new const_Fact();
+              newFact = new Fact();
             } else {
-              newFact = new const_Fact(results);
+              newFact = new Fact(results);
             }
           } else { //set value to bottom if an operand is unusable
-            newFact = new const_Fact();
+            newFact = new Fact();
           }
         } else {
-          newFact = new const_Fact();
+          newFact = new Fact();
         }
         //update edge with fact
-        in->setValue(node->oI,newFact);
+        in->setValue(node->I,newFact);
         in->isTop = false;
         newFact->checkIfSuperconstant();
       } break;
     }
     //save incoming data to the node
     free(node->e);
-    node->e = new const_Edge(in);
+    node->e = new Edge(in);
     return in;
   }
-  set<Value *> getAllResults(Instruction * I, const_Edge * e) {
+
+  set<Value *> getAllResults(Instruction * I, Edge * e) {
     set<Value *> results;
     set<Value *> bad;
     //step 1: cast the values as facts
-    const_Fact * f1 = e->lookup(I->getOperand(0));
-    const_Fact * f2 = e->lookup(I->getOperand(1));
+    Fact * f1 = e->lookup(I->getOperand(0));
+    Fact * f2 = e->lookup(I->getOperand(1));
     //use the opcode to determine the result -> use 
     set<Value *>::iterator it1,it2;
     for(it1 = f1->possibleValues.begin(); it1 != f1->possibleValues.end(); it1++) {
@@ -336,9 +302,11 @@ class const_FlowFunctions
     }
     return NULL;
   }
-  void handleFuncCall(const_Edge * in,Instruction * I){
+
+
+  void handleFuncCall(Edge * in,Instruction * I){
     //anything returned is bottom
-    const_Fact * newFact = new const_Fact();
+    Fact * newFact = new Fact();
     in->setValue(I,newFact);
     in->isTop = false;
     //anything passed in by reference is now bottom
@@ -349,23 +317,26 @@ class const_FlowFunctions
       in->kill(op);
     }
   }
-  const_Edge * mapTerminator(const_Edge * in, const_Node *node) {
+
+
+
+  Edge * mapTerminator(Edge * in, Node *node) {
     //Future idea : add support for terminator instructions (this might take too much work)
     free(node->e);
-    node->e = new const_Edge(in);
+    node->e = new Edge(in);
     return in;
   }
 };
 
 
-class const_latticeObj
+class Lattice:public BaseLattice
 {
   public:
-    const_latticeObj(){
+    Lattice(){
       //errs() << "Lattice Created" << "\n";
     }
     //checks for equality between edges
-    bool comparator(const_Edge * F1,const_Edge * F2){
+    bool comparator(Edge * F1,Edge * F2){
       if(F1->isTop != F2->isTop){
         return false;
       }
@@ -374,16 +345,16 @@ class const_latticeObj
         return false;
       }
       //2. iterate over each value and find the corresponding fact.
-      map<Value *,const_Fact *>::iterator it;
+      map<Value *,Fact *>::iterator it;
       for(it = F1->data->begin(); it != F1->data->end(); it++) {
         //2a. check that they both have the same entry
         if(F2->data->count(it->first) != 1) {
           return false;
         }
-        const_Fact * entry = F2->data->find(it->first)->second;
+        Fact * entry = F2->data->find(it->first)->second;
 
         //2b. check that the entry fact is equivalent
-        const_Fact * t = it->second;
+        Fact * t = it->second;
         if(t->possibleValues != entry->possibleValues && t->isBottom != entry->isBottom) {
           return false;
         }
@@ -392,13 +363,13 @@ class const_latticeObj
       return true;
     }
     //merge vector of edges
-    const_Edge * merge(vector<const_Edge *> edges){
+    Edge * merge(vector<Edge *> edges){
       //create resulting edge
-      const_Edge * result = new const_Edge();
+      Edge * result = new Edge();
       //for each edge:
       for(unsigned int i=0;i<edges.size();i++){
         //merge all the facts of the incoming edges
-        map<Value *,const_Fact *>::iterator it;
+        map<Value *,Fact *>::iterator it;
         for(it = edges[i]->data->begin(); it != edges[i]->data->end(); it++) {
           result->addFact(it->first, it->second);
           
@@ -409,141 +380,31 @@ class const_latticeObj
     }
 };
 
+class PrintUtil {
 
-class const_workListObj
-{
-  private:
-    
-    const_latticeObj* optimizationLattice;
-    const_FlowFunctions* FF;
-    
-  public:
-    map<int, const_BBNode*> bbMap;
-    //initialization: setup worklist components
-    const_workListObj(int type){
-      //errs() << "Const Worklist Created" << "\n";
-      optimizationLattice = new const_latticeObj();
-      FF = new const_FlowFunctions();
-    }
+public:
+    map<int, BBNode*> bbMap;
 
-    const_BBNode* lookupBB(llvm::StringRef tempID){
-      int id = atoi(tempID.str().c_str());
-      return bbMap[id];
-    }
-    
-    //connect references to BB and instructions
-    //initialize all edges to bottom
-    void init(llvm::Module &M){
-      //iterate over all functions in module
-      int bbID = 0;
-			for (Module::iterator F = M.begin(), Fe = M.end(); F != Fe; ++F){
-				//iterate over all blocks in a function (that aren't the instrumented
-				for (Function::iterator B = F->begin(), Be = F->end(); B != Be; ++B) {
-          //create a const_BBNode for each basic block
-          B->setName(llvm::Twine(bbID));
-          //create a const_BBNode for each block
-          bbMap[bbID] = new const_BBNode(bbID,B);
-          bbID++;
-				}
-        //the start of every function is set to top
-        Function::iterator first = F->begin();
-        if(first != F->end()) {
-          lookupBB(first->getName())->incoming->isTop = true;
-        }
-			}
-
-      //setup the const_BBNodes with their outgoing edges now that they have ids
-      for(map<int, const_BBNode*>::iterator it = bbMap.begin(); it != bbMap.end(); it++) {
-        it->second->setup();
-      }
-    }
-    
-    vector<const_Edge *> getIncoming_Edges(const_BBNode* N) {
-      vector<const_Edge *> incoming_Edges;
-      int id = atoi(N->originalBB->getName().str().c_str());
-      //3. get incoming edges from predecessors
-      for (pred_iterator PI = pred_begin(N->originalBB), E = pred_end(N->originalBB); PI != E; ++PI) {
-        //add to a vector of edges
-        BasicBlock *Pred = *PI;
-        incoming_Edges.push_back(lookupBB(Pred->getName())->outgoing[id]);
-      }
-      //if the block is the first in the function, then add that as well
-      if(N->incoming->isTop == true){
-        incoming_Edges.push_back(N->incoming);
-      }
-      return incoming_Edges;
-    }
-
-    //run does the actual worklist algorithm...
-    void run(){
-      //1. create a vector of const_BBNodes
-      vector<const_BBNode *> worklist;
-      //2. enqueue each const_BBNode
-      map<int, const_BBNode*>::iterator it;
-      for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        worklist.push_back(it->second);
-      }
-      
-      while(worklist.size() > 0) {
-        //get any const_BBNode
-        const_BBNode *current_Node = worklist.back();
-        worklist.pop_back();
-        
-        //3. get incoming edges from predecessors
-        vector<const_Edge *> incoming_Edges = getIncoming_Edges(current_Node);
-        //merge these incoming edges to form the node input
-        const_Edge * in = optimizationLattice->merge(incoming_Edges);
-        //set incoming edge to the new merged one
-        free(current_Node->incoming);
-        current_Node->incoming = in;
-        const_Edge * inCopy = new const_Edge(in);
-        
-        //4. run flow function on const_BBNode
-        map<int, const_Edge *> out = FF->m(inCopy,current_Node);
-        
-        //foreach output edge...
-        map<int, const_Edge *>::iterator it;
-        for(it = out.begin(); it != out.end(); it++) {
-          int id = it->first;
-          const_Edge * edgeOut = it->second;
-          //5. check if the output edge has changed:
-          if(optimizationLattice->comparator(edgeOut,current_Node->outgoing[id]) == false){
-            free(current_Node->outgoing[id]);
-            current_Node->outgoing[id] = edgeOut;
-            const_BBNode * N = bbMap[id];
-            vector<const_Edge *> succ_Edges = getIncoming_Edges(N);
-            const_Edge * result = optimizationLattice->merge(succ_Edges);
-            //6. if change: update the incoming edge and enqueue successors
-            if(optimizationLattice->comparator(result,N->incoming) == false) {
-              free(N->incoming);
-              N->incoming = result;
-              worklist.push_back(N);
-            }
-          }
-        }
-      }
-    }
- 
 //PRINT FUNCTIONS (just for debugging)
     void printBottom(){
       //print out the relations for each block
-      map<int, const_BBNode*>::iterator it;
+      map<int, BBNode*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        const_BBNode * cBB = it->second;
+        BBNode * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print output foreach successor
-        map<int, const_Edge *>::iterator out;
+        map<int, Edge *>::iterator out;
         for(out = cBB->outgoing.begin(); out != cBB->outgoing.end(); out++) {
           errs() << "--Sucessor:  #" << out->first << "\n";
-          const_Edge * cconst_Edge = out->second;
+          Edge * cEdge = out->second;
           //print the input facts
           errs() << "\tEdge : { ";
-          if(cconst_Edge->isTop){
+          if(cEdge->isTop){
             errs() << "Top }\n";
           } else {
-            map<Value *,const_Fact *> * info = cconst_Edge->data;
-            map<Value *,const_Fact *>::iterator inf;
+            map<Value *,Fact *> * info = cEdge->data;
+            map<Value *,Fact *>::iterator inf;
             for(inf = info->begin(); inf != info->end(); inf++) {
               printEntry(inf->first,inf->second);
             }
@@ -554,9 +415,9 @@ class const_workListObj
     }
     void printTop(){
       //print out the relations for each block
-      map<int, const_BBNode*>::iterator it;
+      map<int, BBNode*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        const_BBNode * cBB = it->second;
+        BBNode * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print the input facts
@@ -564,8 +425,8 @@ class const_workListObj
         if(cBB->incoming->isTop){
           errs() << "Top }\n";
         } else {
-          map<Value *,const_Fact *> * info = cBB->incoming->data;
-          map<Value *,const_Fact *>::iterator it;
+          map<Value *,Fact *> * info = cBB->incoming->data;
+          map<Value *,Fact *>::iterator it;
           for(it = info->begin(); it != info->end(); it++) {
             printEntry(it->first,it->second);
           }
@@ -575,13 +436,13 @@ class const_workListObj
     }
 
     //print out the value and the info it is pointing to...
-    void printEntry(Value * v, const_Fact * f){
+    void printEntry(Value * v, Fact * f){
       errs() << "{ " << *v << ": {";
-      printconst_Fact(f);
+      printFact(f);
       errs() << "}" << " },\n";
     }
 
-    void printconst_Fact(const_Fact * f){
+    void printFact(Fact * f){
       if(f->isBottom == true){
         errs() << "*";
       } else {
@@ -594,3 +455,5 @@ class const_workListObj
       }
     }
 };
+
+}

@@ -82,6 +82,8 @@ class DFF {
 
     	// Given an instruction, it prints its facts in the form { X->10, Y->5, ... }
     	void printInsFact (Instruction* ins_id) {
+
+            
                 if (typeDescription[ins_id] == FULL) {
                     myfile <<ins_id << ": FULL SET"<<endl;
                     return;

@@ -1,6 +1,6 @@
 #define DEBUG_TYPE "BranchFoldingPass"
 #include <map>
-#include "constObjects.cpp"
+#include "ConstantPropagation.cpp"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 
@@ -8,6 +8,8 @@
 //opt -load $LLVMLIB/CSE231.so -ConstPass -BranchFoldingPass < $BENCHMARKS/gcd/gcd.bc > temp.instrumented.bc
 
 using namespace llvm;
+using namespace constprop;
+
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
 	
@@ -22,7 +24,7 @@ namespace {
     bool runOnModule(Module &M){
       
       //create the worklist object
-      const_workListObj* wl = new const_workListObj(10010);
+      Worklist* wl = new Worklist(10010);
       wl->init(M);
       wl->run();
 
@@ -31,21 +33,21 @@ namespace {
       //wl->printBottom();
 
       //For each BBNode
-      for(map<int, const_BBNode*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-        const_BBNode * BBN = it->second;
-        const_Node * N = BBN->nodes.back();
-        if(N->oI->getOpcode() == Instruction::Br) {
+      for(map<int, BBNode*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+        BBNode * BBN = it->second;
+        Node * N = BBN->nodes.back();
+        if(N->I->getOpcode() == Instruction::Br) {
           //get the terminating instruction
-          BranchInst * B = dyn_cast<BranchInst>(N->oI);
+          BranchInst * B = dyn_cast<BranchInst>(N->I);
           //make sure the branch is conditional
           if(B->isConditional()) {
             //use the worklist results to replace input if available
-            Value * temp = N->oI->getOperand(0);
+            Value *temp = N->I->getOperand(0);
             //check if the operand is linked to an instruction
             //NOTE: if it is already a constant like true or false, it will just skip this.
             Instruction * cond = dyn_cast<Instruction>(temp);
             if(cond && N->e->data->count(temp) == 1 ){
-              const_Fact * c = N->e->data->find(cond)->second;
+              Fact *c = N->e->data->find(cond)->second;
               if(c->possibleValues.size() == 1){
                 set<Value *>::iterator itl = c->possibleValues.begin();
                 Value * result = *itl;

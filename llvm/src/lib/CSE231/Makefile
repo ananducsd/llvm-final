@@ -9,7 +9,7 @@
 
 LEVEL = ../..
 LIBRARYNAME = CSE231
-#PARALLEL_DIRS = SidGroup
+PARALLEL_DIRS = SidGroup
 LOADABLE_MODULE = 1
 
 include $(LEVEL)/Makefile.common
