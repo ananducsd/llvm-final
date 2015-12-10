@@ -24,7 +24,7 @@ echo "Generating $fname.bc and running mem2reg pass . . . "
 opt -mem2reg < $fname.bc > ${fname}_in.bc
 echo "Running ${passname} on ${fname}_in.bc . . . "
 echo -e "\n-----------------------------------------------------------------------"
-opt -load $LLVMLIB/SidGroup.so -${passname} < ${fname}_in.bc > ${fname}_out.bc
+opt -load $LLVMLIB/CSE231.so -${passname} < ${fname}_in.bc > ${fname}_out.bc
 echo -e "\n-----------------------------------------------------------------------"
 echo "Converting generated BitCode files into human readable format . . . "
 llvm-dis ${fname}_in.bc
