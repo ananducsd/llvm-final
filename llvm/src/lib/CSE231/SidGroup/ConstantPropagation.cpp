@@ -14,6 +14,7 @@
 #include "stdio.h"
 #include "string.h"
 #include <vector>
+#include "MetaLattice.cpp"
 
 using namespace std;
 using namespace llvm;
@@ -55,7 +56,7 @@ class Fact
   }
 };
 
-class Edge:public BaseEdge
+class Edge
 {
   public:
   bool isTop;
@@ -147,14 +148,14 @@ class Edge:public BaseEdge
   }
 };
 
-class FlowFunctions:public BaseFlowFunctions
+class FlowFunctions
 {
   public:
   FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
   
-  map<int, Edge *> m(Edge * in, BBNode * N){
+  map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
     map<int, Edge *> result;
 
     //go over each instruction in the BB and apply the flow function!!!
@@ -173,7 +174,7 @@ class FlowFunctions:public BaseFlowFunctions
   }
 
   //do flow function calls here
-  Edge * mapInstruction(Edge *in, Node *node) {
+  Edge * mapInstruction(Edge *in, Node<Edge> *node) {
     switch(node->I->getOpcode()) {
       //X = *
       case Instruction::Alloca: { //done
@@ -320,7 +321,7 @@ class FlowFunctions:public BaseFlowFunctions
 
 
 
-  Edge * mapTerminator(Edge * in, Node *node) {
+  Edge * mapTerminator(Edge * in, Node<Edge> *node) {
     //Future idea : add support for terminator instructions (this might take too much work)
     free(node->e);
     node->e = new Edge(in);
@@ -329,7 +330,7 @@ class FlowFunctions:public BaseFlowFunctions
 };
 
 
-class Lattice:public BaseLattice
+class Lattice
 {
   public:
     Lattice(){
@@ -383,14 +384,14 @@ class Lattice:public BaseLattice
 class PrintUtil {
 
 public:
-    map<int, BBNode*> bbMap;
+    map<int, BBNode<Edge> *> bbMap;
 
 //PRINT FUNCTIONS (just for debugging)
     void printBottom(){
       //print out the relations for each block
-      map<int, BBNode*>::iterator it;
+      map<int, BBNode<Edge>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode * cBB = it->second;
+        BBNode<Edge> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print output foreach successor
@@ -415,9 +416,9 @@ public:
     }
     void printTop(){
       //print out the relations for each block
-      map<int, BBNode*>::iterator it;
+      map<int, BBNode<Edge>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode * cBB = it->second;
+        BBNode<Edge> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print the input facts

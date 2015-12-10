@@ -6,6 +6,7 @@
 
 using namespace llvm;
 using namespace constprop;
+using namespace metalattice;
 
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
@@ -21,7 +22,7 @@ namespace {
     bool runOnModule(Module &M){
       
       //create the worklist object
-      Worklist* wl = new Worklist(10010);
+      Worklist<Edge, FlowFunctions, Lattice>* wl = new Worklist<Edge, FlowFunctions, Lattice>(10010);
       wl->init(M);
       wl->run();
 
@@ -29,12 +30,12 @@ namespace {
       //wl->printTop();
       //wl->printBottom();
       
-      //For each BBNode
-      for(map<int, BBNode*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-        BBNode * BBN = it->second;
+      //For each BBNode<Edge>
+      for(map<int, BBNode<Edge>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+        BBNode<Edge> * BBN = it->second;
         //For each node
         for(unsigned int i=0; i<BBN->nodes.size(); i++){
-          Node * N = BBN->nodes[i];
+          Node<Edge> * N = BBN->nodes[i];
           //if not an alloc instruction,
           if(N->I->getOpcode() != Instruction::Alloca){
             //if there exists an entry for this instruction

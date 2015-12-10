@@ -24,7 +24,7 @@ using namespace metalattice;
 
 namespace avlexp{
 
-class Edge: public BaseEdge
+class Edge
 {
   public:
   bool isTop;
@@ -64,14 +64,14 @@ class Edge: public BaseEdge
 
 
 
-class FlowFunctions:public BaseFlowFunctions
+class FlowFunctions
 {
   public:
   FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
   
-  map<int, Edge *> m(Edge * in, BBNode * N){
+  map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
     map<int, Edge *> result;
     //go over each instruction in the BB and apply the flow function!!!
     for(unsigned int i=0;i<N->nodes.size() - 1;i++){
@@ -88,7 +88,7 @@ class FlowFunctions:public BaseFlowFunctions
     return result;
   }
   //do flow function calls here
-  Edge * mapInstruction(Edge * in, Node *node) {
+  Edge * mapInstruction(Edge * in, Node<Edge> *node) {
     //free old input to the node and save the new one
     free(node->e);
     node->e = new Edge(in); //makes a copy
@@ -108,7 +108,7 @@ class FlowFunctions:public BaseFlowFunctions
   }
 };
 
-class Lattice:public BaseLattice
+class Lattice
 {
   public:
     Lattice(){
@@ -163,14 +163,14 @@ class Lattice:public BaseLattice
 class PrintUtil {
 //PRINT FUNCTIONS (just for debugging)
   public:
-    map<int, BBNode*> bbMap;
+    map<int, BBNode<Edge>*> bbMap;
 
     void printBottom(){
       errs() << "\n\n\nOutgoing edges:\n";
       //print out the relations for each block
-      map<int, BBNode*>::iterator it;
+      map<int, BBNode<Edge>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode * cBB = it->second;
+        BBNode<Edge> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print output foreach successor
@@ -195,9 +195,9 @@ class PrintUtil {
     void printTop(){
       errs() << "\n\n\nIncoming edges:\n";
       //print out the relations for each block
-      map<int, BBNode*>::iterator it;
+      map<int, BBNode<Edge>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode * cBB = it->second;
+        BBNode<Edge> * cBB = it->second;
         Edge * in = cBB->incoming;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
