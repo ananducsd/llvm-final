@@ -21,23 +21,23 @@ using namespace llvm;
 
 namespace metalattice {
 
-	
+
 
 /*
 class Edge {
 
-	public: 
+	public:
 
 	Edge();
 	Edge(Edge *p);
 	bool isTop;
-};	
+};
 
 class Lattice {
 	public:
 
 	virtual bool comparator(Edge * F1,Edge * F2) = 0;
-	virtual Edge * merge(vector<Edge *> edges) = 0; 
+	virtual Edge * merge(vector<Edge *> edges) = 0;
 };
 
 template<typename E>
@@ -58,7 +58,7 @@ class Node
   Instruction * I;
   // incoming edge
   E * e;
-  
+
   Node(Instruction *pI){
     e = new E();
     I = pI;
@@ -72,9 +72,10 @@ class BBNode
   int bID;
   BasicBlock *originalBB;
   E *incoming;
+  // List of successors for BB with a particular bbID
   map<int, E *> outgoing;
   vector<Node<E> *> nodes;
-  
+
   BBNode(int ibID, BasicBlock * BB){
     bID = ibID;
     originalBB = BB;
@@ -101,10 +102,10 @@ template<typename E, typename F, typename L>
 class Worklist
 {
   private:
-    
+
     L* optimizationLattice;
     F* FF;
-    
+
   public:
     map<int, BBNode<E> *> bbMap;
     //initialization: setup worklist components
@@ -117,7 +118,7 @@ class Worklist
       int id = atoi(tempID.str().c_str());
       return bbMap[id];
     }
-    
+
     //connect references to BB and instructions
     //initialize all edges to bottom
     void init(llvm::Module &M){
@@ -144,7 +145,7 @@ class Worklist
         it->second->setup();
       }
     }
-    
+
     vector<E *> getIncomingEs(BBNode<E>* N){
       vector<E *> incomingEs;
       int id = atoi(N->originalBB->getName().str().c_str());
@@ -176,7 +177,7 @@ class Worklist
         //get any BBNode
         BBNode<E> *currentNode = worklist.back();
         worklist.pop_back();
-        
+
         //3. get incoming edges from predecessors
         vector<E *> incomingEs = getIncomingEs(currentNode);
         //merge these incoming edges to form the node input
@@ -185,10 +186,10 @@ class Worklist
         free(currentNode->incoming);
         currentNode->incoming = in;
         E * inCopy = new E(in);
-        
+
         //4. run flow function on BBNode
         map<int, E *> out = FF->m(inCopy,currentNode);
-        
+
         //foreach output edge...
         typename map<int, E *>::iterator it;
         for(it = out.begin(); it != out.end(); it++) {
@@ -212,7 +213,7 @@ class Worklist
       }
     }
 
-    
+
 };
 
 }

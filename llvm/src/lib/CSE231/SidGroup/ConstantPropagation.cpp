@@ -31,7 +31,7 @@ class Fact
     isBottom = true;
   }
   Fact(set<Value *> startValues) {
-    if(startValues.size() > 0) { 
+    if(startValues.size() > 0) {
       possibleValues = startValues;
       isBottom = false;
       checkIfSuperconstant();
@@ -88,7 +88,7 @@ class Edge
     }
     return data->count(test);
   }
-  
+
   Fact * lookup(Value * key){
     if(data->count(key) == 1) { //if key is instruction that has data already,
       return new Fact(data->find(key)->second); //then return that data
@@ -154,8 +154,9 @@ class FlowFunctions
   FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
-  
+  // Given an incomming edge fact and basic block,  it runs  the flow function for entire block
   map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
+    // Map corresponding to terminator edge fact for all outgoing edges
     map<int, Edge *> result;
 
     //go over each instruction in the BB and apply the flow function!!!
@@ -163,7 +164,7 @@ class FlowFunctions
       in = mapInstruction(in, N->nodes[i]);
     }
     in->isTop = false;
-    
+
     //use the terminating instructions to make an edge for each successor
     for (succ_iterator SI = succ_begin(N->originalBB), E = succ_end(N->originalBB); SI != E; ++SI) {
       BasicBlock *Succ = *SI;
@@ -198,7 +199,7 @@ class FlowFunctions
       //X = Y
       case Instruction::Load: { //working on!
         //due to SSA we can just add a fact where it has the value pointing to the Y value...
-        Fact * newFact;  
+        Fact * newFact;
         if(in->data->count(node->I->getOperand(0)) == 1) {
           newFact = new Fact(in->data->find(node->I->getOperand(0))->second);
         } else {
@@ -247,7 +248,7 @@ class FlowFunctions
     //step 1: cast the values as facts
     Fact * f1 = e->lookup(I->getOperand(0));
     Fact * f2 = e->lookup(I->getOperand(1));
-    //use the opcode to determine the result -> use 
+    //use the opcode to determine the result -> use
     set<Value *>::iterator it1,it2;
     for(it1 = f1->possibleValues.begin(); it1 != f1->possibleValues.end(); it1++) {
       for(it2 = f2->possibleValues.begin(); it2 != f2->possibleValues.end(); it2++) {
@@ -295,7 +296,7 @@ class FlowFunctions
       case Instruction::FDiv: {
         return ConstantExpr::getFDiv(c1,c2);
       } break;
-      
+
       case Instruction::ICmp: {
         CmpInst *cmpInst = dyn_cast<CmpInst>(&*I);
         return ConstantExpr::getICmp(cmpInst->getPredicate(),c1,c2);
@@ -373,7 +374,7 @@ class Lattice
         map<Value *,Fact *>::iterator it;
         for(it = edges[i]->data->begin(); it != edges[i]->data->end(); it++) {
           result->addFact(it->first, it->second);
-          
+
         }
       }
       result->isTop = result->data->size() == 0;
