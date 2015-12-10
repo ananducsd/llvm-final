@@ -3,4 +3,4 @@ llvm/src/*
 llvm/build
 
 #do not ignore CSE231 code
-!llvm/src/lib/CSE231
+#llvm/src/lib/CSE231

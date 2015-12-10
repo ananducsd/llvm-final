@@ -66,7 +66,7 @@ class Fact
       isBottom = true;
     }
   }
-  
+
   void mergeRanges(){
     //for each range, merge the min and max values to create a single range.
     Range result;
@@ -99,7 +99,7 @@ class Fact
   }
 };
 
-class Edge
+class EdgeFact
 {
   public:
   bool isTop;
@@ -108,14 +108,14 @@ class Edge
   //holds comparisons that have yet to be evaluated to true or false.
   vector<Value *> * pending;
 
-  Edge(){
+  EdgeFact(){
     isTop = false;
     isBottom = true;
     data = new map<Value *,Fact *>();
     //pending = new vector<Value *>;
   }
   //copy constructor for edge
-  Edge(Edge * parent){
+  EdgeFact(EdgeFact * parent){
     isTop = parent->isTop;
     isBottom = parent->isBottom;
     data = new map<Value *,Fact *>();
@@ -212,7 +212,7 @@ class Edge
       //errs() << *c << "is not a constant!\n";
     }
   }
-  
+
   void kill(Value * key) {
     if(data->count(key) == 1) { //check that key exists
       data->erase(data->find(key));
@@ -226,12 +226,12 @@ class FlowFunctions
   FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
-  
-  map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
-    map<int, Edge *> result;
+
+  map<int, EdgeFact *> runFlowOnBlock(EdgeFact * in, BBNode<EdgeFact> * N){
+    map<int, EdgeFact *> result;
     //go over each instruction in the BB and apply the flow function!!!
     for(unsigned int i=0;i<N->nodes.size() - 1;i++){
-      in = mapInstruction(in, N->nodes[i]);
+      in = runFlowFn(in, N->nodes[i]);
     }
     in->isTop = false;
     //then use the terminating instructions to make an edge for each successor
@@ -239,14 +239,14 @@ class FlowFunctions
     for (succ_iterator SI = succ_begin(N->originalBB), E = succ_end(N->originalBB); SI != E; ++SI) {
       BasicBlock *Succ = *SI;
       int id = atoi(Succ->getName().str().c_str());
-      result[id] = mapTerminator(new Edge(in), index, N->originalBB->getTerminator());
+      result[id] = mapTerminator(new EdgeFact(in), index, N->originalBB->getTerminator());
       index++;
     }
     return result;
   }
 
   //do flow function calls here
-  Edge * mapInstruction(Edge *in, Node<Edge> *node) {
+  EdgeFact * runFlowFn(EdgeFact *in, Node<EdgeFact> *node) {
     if(node->I->getOpcode() == Instruction::ICmp) {
       in->kill(node->I->getOperand(0));
       //add this Fact to a list of "pending" for the edge.  On actual branching, we will have to add the range, or invert the range and add that.
@@ -265,11 +265,11 @@ class FlowFunctions
       in->isTop = false;
     }
     free(node->e);
-    node->e = new Edge(in);
+    node->e = new EdgeFact(in);
     return in;
   }
   //TODO : need to consider switch terminators?!
-  Edge * mapTerminator(Edge * in, int sIndex, Instruction * I) {
+  EdgeFact * mapTerminator(EdgeFact * in, int sIndex, Instruction * I) {
     //if the terminating instruction is a conditional branch, then evaluate it!
     if(I->getOpcode() == Instruction::Br) {
       if(I->getNumOperands() == 3) {
@@ -295,7 +295,7 @@ class Lattice
       //errs() << "Lattice Created" << "\n";
     }
     //checks for equality between edges
-    bool comparator(Edge * F1,Edge * F2){
+    bool comparator(EdgeFact * F1,EdgeFact * F2){
       if(F1->isTop != F2->isTop){
         return false;
       }
@@ -333,9 +333,9 @@ class Lattice
       return true;
     }
     //merge vector of edges
-    Edge * merge(vector<Edge *> edges){
+    EdgeFact * merge(vector<EdgeFact *> edges){
       //create resulting edge
-      Edge * result = new Edge();
+      EdgeFact * result = new EdgeFact();
       //for each edge:
       for(unsigned int i=0;i<edges.size();i++){
         //merge all the r_Facts of the incoming edges

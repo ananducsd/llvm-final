@@ -56,7 +56,7 @@ class Fact
   }
 };
 
-class Edge
+class EdgeFact
 {
   public:
   bool isTop;
@@ -65,13 +65,13 @@ class Edge
   // map from variable to constants  { (X, {3, 5}), (Y, {5} ) }
   map<Value *,Fact *> * data;
 
-  Edge(){
+  EdgeFact(){
     isTop = false;
     isBottom = true;
     data = new map<Value *,Fact *>();
   }
   //copy constructor for edge
-  Edge(Edge * parent){
+  EdgeFact(EdgeFact * parent){
     isTop = parent->isTop;
     isBottom = parent->isBottom;
     data = new map<Value *,Fact *>();
@@ -155,27 +155,27 @@ class FlowFunctions
     //errs() << "Flow Functions Created" << "\n";
   }
   // Given an incomming edge fact and basic block,  it runs  the flow function for entire block
-  map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
+  map<int, EdgeFact *> runFlowOnBlock(EdgeFact * in, BBNode<EdgeFact> * BB){
     // Map corresponding to terminator edge fact for all outgoing edges
-    map<int, Edge *> result;
+    map<int, EdgeFact *> result;
 
     //go over each instruction in the BB and apply the flow function!!!
-    for(unsigned int i=0;i<N->nodes.size() - 1;i++){
-      in = mapInstruction(in, N->nodes[i]);
+    for(unsigned int i=0;i<BB->nodes.size() - 1;i++){
+      in = runFlowFn(in, BB->nodes[i]);
     }
     in->isTop = false;
 
     //use the terminating instructions to make an edge for each successor
-    for (succ_iterator SI = succ_begin(N->originalBB), E = succ_end(N->originalBB); SI != E; ++SI) {
+    for (succ_iterator SI = succ_begin(BB->originalBB), E = succ_end(BB->originalBB); SI != E; ++SI) {
       BasicBlock *Succ = *SI;
       int id = atoi(Succ->getName().str().c_str());
-      result[id] = mapTerminator(new Edge(in),N->nodes.back());
+      result[id] = mapTerminator(new EdgeFact(in),BB->nodes.back());
     }
     return result;
   }
 
   //do flow function calls here
-  Edge * mapInstruction(Edge *in, Node<Edge> *node) {
+  EdgeFact * runFlowFn(EdgeFact *in, Node<EdgeFact> *node) {
     switch(node->I->getOpcode()) {
       //X = *
       case Instruction::Alloca: { //done
@@ -238,11 +238,11 @@ class FlowFunctions
     }
     //save incoming data to the node
     free(node->e);
-    node->e = new Edge(in);
+    node->e = new EdgeFact(in);
     return in;
   }
 
-  set<Value *> getAllResults(Instruction * I, Edge * e) {
+  set<Value *> getAllResults(Instruction * I, EdgeFact * e) {
     set<Value *> results;
     set<Value *> bad;
     //step 1: cast the values as facts
@@ -306,7 +306,7 @@ class FlowFunctions
   }
 
 
-  void handleFuncCall(Edge * in,Instruction * I){
+  void handleFuncCall(EdgeFact * in,Instruction * I){
     //anything returned is bottom
     Fact * newFact = new Fact();
     in->setValue(I,newFact);
@@ -322,10 +322,10 @@ class FlowFunctions
 
 
 
-  Edge * mapTerminator(Edge * in, Node<Edge> *node) {
+  EdgeFact * mapTerminator(EdgeFact * in, Node<EdgeFact> *node) {
     //Future idea : add support for terminator instructions (this might take too much work)
     free(node->e);
-    node->e = new Edge(in);
+    node->e = new EdgeFact(in);
     return in;
   }
 };
@@ -338,7 +338,7 @@ class Lattice
       //errs() << "Lattice Created" << "\n";
     }
     //checks for equality between edges
-    bool comparator(Edge * F1,Edge * F2){
+    bool comparator(EdgeFact * F1,EdgeFact * F2){
       if(F1->isTop != F2->isTop){
         return false;
       }
@@ -365,9 +365,9 @@ class Lattice
       return true;
     }
     //merge vector of edges
-    Edge * merge(vector<Edge *> edges){
+    EdgeFact * merge(vector<EdgeFact *> edges){
       //create resulting edge
-      Edge * result = new Edge();
+      EdgeFact * result = new EdgeFact();
       //for each edge:
       for(unsigned int i=0;i<edges.size();i++){
         //merge all the facts of the incoming edges
@@ -385,21 +385,21 @@ class Lattice
 class PrintUtil {
 
 public:
-    map<int, BBNode<Edge> *> bbMap;
+    map<int, BBNode<EdgeFact> *> bbMap;
 
 //PRINT FUNCTIONS (just for debugging)
     void printBottom(){
       //print out the relations for each block
-      map<int, BBNode<Edge>*>::iterator it;
+      map<int, BBNode<EdgeFact>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode<Edge> * cBB = it->second;
+        BBNode<EdgeFact> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print output foreach successor
-        map<int, Edge *>::iterator out;
+        map<int, EdgeFact *>::iterator out;
         for(out = cBB->outgoing.begin(); out != cBB->outgoing.end(); out++) {
           errs() << "--Sucessor:  #" << out->first << "\n";
-          Edge * cEdge = out->second;
+          EdgeFact * cEdge = out->second;
           //print the input facts
           errs() << "\tEdge : { ";
           if(cEdge->isTop){
@@ -417,13 +417,13 @@ public:
     }
     void printTop(){
       //print out the relations for each block
-      map<int, BBNode<Edge>*>::iterator it;
+      map<int, BBNode<EdgeFact>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode<Edge> * cBB = it->second;
+        BBNode<EdgeFact> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print the input facts
-        errs() << "Edge : { ";
+        errs() << "EdgeFact : { ";
         if(cBB->incoming->isTop){
           errs() << "Top }\n";
         } else {

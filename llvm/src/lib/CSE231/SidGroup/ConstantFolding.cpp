@@ -10,7 +10,7 @@ using namespace metalattice;
 
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
-	
+
   struct ConstantFoldingPass : public ModulePass {
     static char ID; // Pass identification, replacement for typeid
 
@@ -18,24 +18,24 @@ namespace {
     ConstantFoldingPass() : ModulePass(ID) {
 			//errs() << "Const Module Created" << "\n";
 		}
-    
+
     bool runOnModule(Module &M){
-      
+
       //create the worklist object
-      Worklist<Edge, FlowFunctions, Lattice>* wl = new Worklist<Edge, FlowFunctions, Lattice>(10010);
+      Worklist<EdgeFact, FlowFunctions, Lattice>* wl = new Worklist<EdgeFact, FlowFunctions, Lattice>(10010);
       wl->init(M);
       wl->run();
 
       //M.dump();
       //wl->printTop();
       //wl->printBottom();
-      
-      //For each BBNode<Edge>
-      for(map<int, BBNode<Edge>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-        BBNode<Edge> * BBN = it->second;
+
+      //For each BBNode<EdgeFact>
+      for(map<int, BBNode<EdgeFact>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+        BBNode<EdgeFact> * BBN = it->second;
         //For each node
         for(unsigned int i=0; i<BBN->nodes.size(); i++){
-          Node<Edge> * N = BBN->nodes[i];
+          Node<EdgeFact> * N = BBN->nodes[i];
           //if not an alloc instruction,
           if(N->I->getOpcode() != Instruction::Alloca){
             //if there exists an entry for this instruction

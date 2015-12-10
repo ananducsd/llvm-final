@@ -24,19 +24,19 @@ using namespace metalattice;
 
 namespace avlexp{
 
-class Edge
+class EdgeFact
 {
   public:
   bool isTop;
   bool isBottom;
   set<Instruction *> aExpr;
 
-  Edge(){
+  EdgeFact(){
     isTop = false;
     isBottom = true;
   }
   //copy constructor for edge
-  Edge(Edge * parent){
+  EdgeFact(EdgeFact * parent){
     isTop = parent->isTop;
     isBottom = parent->isBottom;
     aExpr.insert(parent->aExpr.begin(),parent->aExpr.end());
@@ -70,28 +70,28 @@ class FlowFunctions
   FlowFunctions(){
     //errs() << "Flow Functions Created" << "\n";
   }
-  
-  map<int, Edge *> m(Edge * in, BBNode<Edge> * N){
-    map<int, Edge *> result;
+
+  map<int, EdgeFact *> runFlowOnBlock(EdgeFact * in, BBNode<EdgeFact> * N){
+    map<int, EdgeFact *> result;
     //go over each instruction in the BB and apply the flow function!!!
     for(unsigned int i=0;i<N->nodes.size() - 1;i++){
-      in = mapInstruction(in, N->nodes[i]);
+      in = runFlowFn(in, N->nodes[i]);
     }
     in->isBottom = false;
-    
+
     //use the terminating instructions to make an edge for each successor
     for (succ_iterator SI = succ_begin(N->originalBB), E = succ_end(N->originalBB); SI != E; ++SI) {
       BasicBlock *Succ = *SI;
       int id = atoi(Succ->getName().str().c_str());
-      result[id] = mapTerminator(new Edge(in));
+      result[id] = mapTerminator(new EdgeFact(in));
     }
     return result;
   }
   //do flow function calls here
-  Edge * mapInstruction(Edge * in, Node<Edge> *node) {
+  EdgeFact * runFlowFn(EdgeFact * in, Node<EdgeFact> *node) {
     //free old input to the node and save the new one
     free(node->e);
-    node->e = new Edge(in); //makes a copy
+    node->e = new EdgeFact(in); //makes a copy
     //treat stores differently: they destroy available expressions
     if(node->I->getOpcode() == Instruction::Store){
       in->removeValue((Instruction *)node->I->getOperand(1));
@@ -101,8 +101,8 @@ class FlowFunctions
     }
     return in;
   }
-  
-  Edge * mapTerminator(Edge * in) {
+
+  EdgeFact * mapTerminator(EdgeFact * in) {
     //Future Idea : add support for terminator instructions
     return in;
   }
@@ -115,7 +115,7 @@ class Lattice
       //errs() << "Lattice Created" << "\n";
     }
     //checks for equality between edges
-    bool comparator(Edge * F1,Edge * F2){
+    bool comparator(EdgeFact * F1,EdgeFact * F2){
       if(F1->isTop != F2->isTop){
         return false;
       }
@@ -135,11 +135,11 @@ class Lattice
       return true;
     }
     //merge vector of edges.  this is an intersection of sets
-    Edge * merge(vector<Edge *> edges){
+    EdgeFact * merge(vector<EdgeFact *> edges){
       //create resulting edge
-      Edge * result;
+      EdgeFact * result;
       if(edges.size() > 1) {
-        result = new Edge();
+        result = new EdgeFact();
         result->isBottom = false;
         set<Instruction *> * previous = &edges[0]->aExpr;
         for(unsigned int i=1;i<edges.size();i++){
@@ -150,9 +150,9 @@ class Lattice
         }
       } else {
         if(edges.size() == 1){
-          result = new Edge(edges[0]);
+          result = new EdgeFact(edges[0]);
         } else {
-          result = new Edge();
+          result = new EdgeFact();
         }
       }
       return result;
@@ -163,21 +163,21 @@ class Lattice
 class PrintUtil {
 //PRINT FUNCTIONS (just for debugging)
   public:
-    map<int, BBNode<Edge>*> bbMap;
+    map<int, BBNode<EdgeFact>*> bbMap;
 
     void printBottom(){
       errs() << "\n\n\nOutgoing edges:\n";
       //print out the relations for each block
-      map<int, BBNode<Edge>*>::iterator it;
+      map<int, BBNode<EdgeFact>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode<Edge> * cBB = it->second;
+        BBNode<EdgeFact> * cBB = it->second;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print output foreach successor
-        map<int, Edge *>::iterator out;
+        map<int, EdgeFact *>::iterator out;
         for(out = cBB->outgoing.begin(); out != cBB->outgoing.end(); out++) {
           errs() << "--Sucessor:  #" << out->first << "\n";
-          Edge * cEdge = out->second;
+          EdgeFact * cEdge = out->second;
           //print the input facts
           errs() << "\tEdge : { ";
           if(cEdge->isBottom == true){
@@ -195,14 +195,14 @@ class PrintUtil {
     void printTop(){
       errs() << "\n\n\nIncoming edges:\n";
       //print out the relations for each block
-      map<int, BBNode<Edge>*>::iterator it;
+      map<int, BBNode<EdgeFact>*>::iterator it;
       for(it = bbMap.begin(); it != bbMap.end(); it++) {
-        BBNode<Edge> * cBB = it->second;
-        Edge * in = cBB->incoming;
+        BBNode<EdgeFact> * cBB = it->second;
+        EdgeFact * in = cBB->incoming;
         //print the BB id
         errs() << "-=BLOCK " << cBB->originalBB->getName() << " =-\n";
         //print the input facts
-        errs() << "Edge : { ";
+        errs() << "EdgeFact : { ";
         if(in->isBottom == true){
           errs() << "* } \n";
         } else {
@@ -219,7 +219,7 @@ class PrintUtil {
     void printEntry(Instruction * v){
       errs() << "{" << *v << "}";
       errs() << ",\n";
-    }  
+    }
 };
 
 }

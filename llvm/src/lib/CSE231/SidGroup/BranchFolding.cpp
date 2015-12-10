@@ -4,7 +4,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 
-//NOTE : this algorithm 
+//NOTE : this algorithm
 //opt -load $LLVMLIB/CSE231.so -ConstPass -BranchFoldingPass < $BENCHMARKS/gcd/gcd.bc > temp.instrumented.bc
 
 using namespace llvm;
@@ -12,7 +12,7 @@ using namespace constprop;
 
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
-	
+
   struct BranchFoldingPass : public ModulePass {
     static char ID; // Pass identification, replacement for typeid
 
@@ -20,11 +20,11 @@ namespace {
     BranchFoldingPass() : ModulePass(ID) {
 			//errs() << "Branch Folding Module Created" << "\n";
 		}
-    
+
     bool runOnModule(Module &M){
-      
+
       //create the worklist object
-      Worklist<Edge, FlowFunctions, Lattice>* wl = new Worklist<Edge, FlowFunctions, Lattice>(10010);
+      Worklist<EdgeFact, FlowFunctions, Lattice>* wl = new Worklist<EdgeFact, FlowFunctions, Lattice>(10010);
       wl->init(M);
       wl->run();
 
@@ -32,10 +32,10 @@ namespace {
       //wl->printTop();
       //wl->printBottom();
 
-      //For each BBNode<Edge>
-      for(map<int, BBNode<Edge>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-        BBNode<Edge> * BBN = it->second;
-        Node<Edge> * N = BBN->nodes.back();
+      //For each BBNode<EdgeFact>
+      for(map<int, BBNode<EdgeFact>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+        BBNode<EdgeFact> * BBN = it->second;
+        Node<EdgeFact> * N = BBN->nodes.back();
         if(N->I->getOpcode() == Instruction::Br) {
           //get the terminating instruction
           BranchInst * B = dyn_cast<BranchInst>(N->I);

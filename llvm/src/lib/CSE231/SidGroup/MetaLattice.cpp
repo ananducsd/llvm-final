@@ -24,27 +24,27 @@ namespace metalattice {
 
 
 /*
-class Edge {
+class EdgeFact {
 
 	public:
 
-	Edge();
-	Edge(Edge *p);
+	EdgeFact();
+	EdgeFact(EdgeFact *p);
 	bool isTop;
 };
 
 class Lattice {
 	public:
 
-	virtual bool comparator(Edge * F1,Edge * F2) = 0;
-	virtual Edge * merge(vector<Edge *> edges) = 0;
+	virtual bool comparator(EdgeFact * F1,EdgeFact * F2) = 0;
+	virtual EdgeFact * merge(vector<EdgeFact *> edges) = 0;
 };
 
 template<typename E>
 class FlowFunctions {
 	public:
 
-	virtual map<int, Edge *> m(Edge * in, BBNode<E> * N) = 0;
+	virtual map<int, EdgeFact *> runFlowOnBlock(EdgeFact * in, BBNode<E> * N) = 0;
 };
 
 */
@@ -125,19 +125,19 @@ class Worklist
       //iterate over all functions in module
       int bbID = 0;
 	  for (Module::iterator Fb = M.begin(), Fe = M.end(); Fb != Fe; ++Fb){
-				//iterate over all blocks in a function (that aren't the instrumented
-				for (Function::iterator B = Fb->begin(), Be = Fb->end(); B != Be; ++B) {
-          //create a BBNode for each basic block
-          B->setName(llvm::Twine(bbID));
-          //create a BBNode for each block
-          bbMap[bbID] = new BBNode<E>(bbID,B);
-          bbID++;
-				}
-        //the start of every function is set to top
-        Function::iterator first = Fb->begin();
-        if(first != Fb->end()) {
-          lookupBB(first->getName())->incoming->isTop = true;
-        }
+		//iterate over all blocks in a function (that aren't the instrumented
+        	for (Function::iterator B = Fb->begin(), Be = Fb->end(); B != Be; ++B) {
+                //create a BBNode for each basic block
+                B->setName(llvm::Twine(bbID));
+                //create a BBNode for each block
+                bbMap[bbID] = new BBNode<E>(bbID,B);
+                bbID++;
+			}
+              //the start of every function is set to top
+              Function::iterator first = Fb->begin();
+              if(first != Fb->end()) {
+                lookupBB(first->getName())->incoming->isTop = true;
+            }
 	}
 
       //setup the BBNodes with their outgoing edges now that they have ids
@@ -188,7 +188,7 @@ class Worklist
         E * inCopy = new E(in);
 
         //4. run flow function on BBNode
-        map<int, E *> out = FF->m(inCopy,currentNode);
+        map<int, E *> out = FF->runFlowOnBlock(inCopy,currentNode);
 
         //foreach output edge...
         typename map<int, E *>::iterator it;

@@ -7,7 +7,7 @@ using namespace range;
 
 namespace {
 	static IRBuilder<> builder(getGlobalContext());
-	
+
   struct RangePass : public ModulePass {
     static char ID; // Pass identification, replacement for typeid
 
@@ -29,23 +29,23 @@ namespace {
     bool runOnModule(Module &M){
       /**/
       //create the worklist object
-      Worklist<Edge, FlowFunctions, Lattice>* wl = new Worklist<Edge, FlowFunctions, Lattice>(10010);
+      Worklist<EdgeFact, FlowFunctions, Lattice>* wl = new Worklist<EdgeFact, FlowFunctions, Lattice>(10010);
       wl->init(M);
       wl->run();
       //print results...
       //M.dump();
       //wl->printTop();
-      //wl->printBottom();   
-    
+      //wl->printBottom();
+
       vector<Value *> allocations;
       //Do Range Analysis here:
-      for(map<int, BBNode<Edge>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
-      
+      for(map<int, BBNode<EdgeFact>*>::iterator it = wl->bbMap.begin(); it != wl->bbMap.end(); it++) {
+
         //TODO : track all allocations!
-        BBNode<Edge> * BBN = it->second;
+        BBNode<EdgeFact> * BBN = it->second;
         //For each node
         for(unsigned int i=0; i<BBN->nodes.size(); i++){
-          Node<Edge> * N = BBN->nodes[i];
+          Node<EdgeFact> * N = BBN->nodes[i];
           //llvm::Instruction::GetElementPtr
           if(N->I->getOpcode() == Instruction::GetElementPtr && isa<AllocaInst>(N->I->getOperand(0))){
             //get the first operand (the array)
@@ -67,19 +67,19 @@ namespace {
             } else {
               //not simple case: do a lookup on op2
               //errs()<<"NOT SIMPLE CASE! : " << *N->I << "\n";
-              Edge * e = N->e;
+              EdgeFact * e = N->e;
               Value * entry = NULL;
-              //case 1: operand is in the dictionary      
+              //case 1: operand is in the dictionary
               if(e->data->count(op2) == 1){
                 entry = op2;
               } else {
-                //case 2: 
+                //case 2:
                 //  -a) operand is loaded from a variable that is in the dictionary
                 //  -b) operand is loaded from a computed result (not tracked)
                 if(isa<Instruction>(op2)){
                   //get the variable that op2 loads its value from
                   Value * tV = dyn_cast<Instruction>(op2)->getOperand(0);
-                  
+
                   Instruction * tI = dyn_cast<Instruction>(tV);
                   if(tI->getOpcode() == Instruction::GetElementPtr){
                     //foreach fact in data
