@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include <fstream>
 #include <limits>
 #include "llvm/IR/Instruction.h"
 using namespace std;
@@ -12,6 +13,8 @@ using namespace llvm;
 template <class T>
 class DFF {
     
+    public:
+        ofstream myfile;
     private:
     	typedef map<string, set<T> > InstFact;
     	typedef map <Instruction*, InstFact* > DATA_FLOW_FACT;
@@ -28,9 +31,9 @@ class DFF {
     	// Prints a set in the form X->5, X->10, ...
     	void printSet(string var_id, set<T> temp_set) {
     	    for (SET_IT it=temp_set.begin(); it!=temp_set.end(); ++it) {
-    		if (!isFirstElement) cout <<", ";
+    		if (!isFirstElement) myfile <<", ";
     		else isFirstElement = false;
-    		cout << var_id<< "->" << *it;
+    		myfile << var_id<< "->" << *it << "\n";
     	    }
     	}
 
@@ -80,29 +83,29 @@ class DFF {
     	// Given an instruction, it prints its facts in the form { X->10, Y->5, ... }
     	void printInsFact (Instruction* ins_id) {
                 if (typeDescription[ins_id] == FULL) {
-                    cout <<ins_id << ": FULL SET"<<endl;
+                    myfile <<ins_id << ": FULL SET"<<endl;
                     return;
                 }
                 if (typeDescription[ins_id] == EMPTY) {
-                    cout <<ins_id << ": EMPTY SET"<<endl;
+                    myfile <<ins_id << ": EMPTY SET"<<endl;
                     return;
                 }
     	    InstFact* fact = getInsFact(ins_id); 
-    	    cout <<"    "<<ins_id << ": { ";
+    	    myfile <<"    "<<ins_id << ": { ";
     	    isFirstElement = true;
     	    for (InstFact_IT it=fact->begin(); it!=fact->end(); ++it) {
     		printSet (it->first, it->second);
     	    }
-    	    cout <<" }"<<endl;
+    	    myfile <<" }"<<endl;
     	}
         
         void printInsFact (InstFact* fact) {
-            cout <<": { ";
+            myfile <<": { ";
             isFirstElement = true;
             for (InstFact_IT it=fact->begin(); it!=fact->end(); ++it) {
                 printSet (it->first, it->second);
             }
-            cout <<" }"<<endl;
+            myfile <<" }"<<endl;
         }
 
         void printEverything () {

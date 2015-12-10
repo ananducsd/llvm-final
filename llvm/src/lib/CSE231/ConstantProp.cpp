@@ -52,12 +52,15 @@ namespace{
                 temp->eraseFromParent();
             }
 
-            /*
+            dataFlowFactsMap.myfile.open("~/outfromc.txt");
+            
             for (Function::iterator blk = F.begin(), e = F.end(); blk != e; ++blk) {
                 for (BasicBlock::iterator j = blk->begin(), e = blk->end(); j != e; ++j){
                     dataFlowFactsMap.printInsFact(j);
                 }
-            }*/
+            }
+
+            dataFlowFactsMap.myfile.close();
 
         return true;
     }
