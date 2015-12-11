@@ -22,21 +22,21 @@ For pass-name reference use:
 For file_name reference: 
 
 Constant Propagation Pass is run on the following files:
-
 constProp.c 
 constProp2.c
 
 Range Analysis Pass is to be run on the following files:
-
 range.c
 range2.c
 range3.c
 
 Common Sub-Expression Analysis Pass is to be run on the following files:
-
 cse.c
 
-Alias Analysis Pass is to be run on the following files:
+Branch Folding Pass is to be run on the following files:
+branchfold.c
+branchfold2.c
 
+Alias Analysis Pass is to be run on the following files:
 alias.c
 alias2.c
