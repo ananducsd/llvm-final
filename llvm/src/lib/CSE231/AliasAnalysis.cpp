@@ -8,7 +8,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/IR/Constants.h"
-#include "DFF.h"
+#include "DataflowAlias.h"
 #include <string>
 #include <map>
 #include <queue>
@@ -29,7 +29,7 @@ namespace {
 
         //std::queue<BasicBlock *, std::list<BasicBlock *> > bbQueue; //Worklist queue
         set<BasicBlock*> bbQueue;
-        DFF<string> dataFlowFactsMap; //DataFlowFact map for all instructions
+        DataflowAlias<string> dataFlowFactsMap; //DataFlowFact map for all instructions
 
 
         AliasAnalysis() : FunctionPass(ID){ }
