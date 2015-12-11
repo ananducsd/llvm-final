@@ -1,0 +1,42 @@
+We have provided a directory named part2_benchmarks as part of the Turn-In.
+This folder contains the various benchmarks that we used to run our analysis passes on.
+The code for our Passes is present the llvm/src/lib/CSE231 directory and need no special build commands.
+They can be directly compiled using the make command as in Part 1.
+
+However, the benchmarks are C files that the the analyses run on and 
+need to be compiled separately. The names of these benchmarks are self-explanatory.
+
+We have provided a compileAndRunAnalysis.sh file in the same folder.
+This scipt is used to run the analysis passes on the benchmarks with the following command:
+
+./compileAndRunAnalysis.sh file-name pass-name 
+
+For pass-name reference use:
+ CSEPass           : common subexpression elimination
+ RangePass         : Range analysis
+ BranchFoldingPass : Branch folding
+ ConstPass         : Constant propagation and folding
+ alias_analysis	   : Pointer Analysis
+
+
+For file_name reference: 
+
+Constant Propagation Pass is run on the following files:
+
+constProp.c 
+constProp2.c
+
+Range Analysis Pass is to be run on the following files:
+
+range.c
+range2.c
+range3.c
+
+Common Sub-Expression Analysis Pass is to be run on the following files:
+
+cse.c
+
+Alias Analysis Pass is to be run on the following files:
+
+alias.c
+alias2.c
