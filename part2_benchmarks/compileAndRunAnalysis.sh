@@ -49,3 +49,7 @@ echo "Converting generated BitCode files into human readable format . . . "
 llvm-dis ${fname}_in.bc
 llvm-dis ${fname}_out.bc
 echo -e "Success\n Unoptimized output: ${fname}_in.ll\n Optimized output: ${fname}_out.ll"
+
+
+#opt -die < ${fname}_out.bc > ${fname}_out.bc
+#opt -simplifycfg < ${fname}_out.bc > ${fname}_out.bc
